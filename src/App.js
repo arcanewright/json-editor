@@ -1,12 +1,13 @@
 import './App.css';
 import ContentArea from "./ContentArea"
-import {useState, useEffect} from "react"
+import {useState} from "react"
 import {v4 as uuidv4} from "uuid"
 
 function App() {
   const [dataArray, setDataArray] = useState([])
   const [rawFile, setRawFile] = useState("")
   const [rawJSONObj, setRawJSONObj] = useState({abc:"xyz", def:{g:"h", i:"j"}, klm:["n","o","p", "q"]})
+  const [dataLoaded, setDataLoaded] = useState(false)
 
   const fileToJSON = (file) => {
     setRawFile(file)
@@ -26,7 +27,7 @@ function App() {
 
 
     setDataArray(result)
-
+    setDataLoaded(true)
   }
 
   const getDataFromEntry = (entry, parent, label = "") => {
@@ -42,18 +43,18 @@ function App() {
       newArray.push({type:"object", id:myuuid, parent:parent, label:label})
       for (const [key, value] of Object.entries(entry)) {
         let labelID = uuidv4()
-        newArray.push({type:"label", id:labelID, value: key, parent:myuuid})
+        newArray.push({type:"label", id:labelID, value:key, parent:myuuid})
         newArray = newArray.concat(getDataFromEntry(value, myuuid, labelID))
       }
     }
     else if (typeof entry === "boolean") {
-      newArray.push({type:"boolean", id:myuuid, value: entry.toString(), parent:parent})
+      newArray.push({type:"boolean", id:myuuid, value: entry.toString(), parent:parent, label:label})
     }
     else if (typeof entry === "number") {
-      newArray.push({type:"number", id:myuuid, value: entry.toString(), parent:parent})
+      newArray.push({type:"number", id:myuuid, value: entry.toString(), parent:parent, label:label})
     }
     else if (typeof entry === "string") {
-      newArray.push({type:"string", id:myuuid, value: entry, parent:parent})
+      newArray.push({type:"string", id:myuuid, value: entry, parent:parent, label:label})
     }
 
     return newArray
@@ -63,7 +64,7 @@ function App() {
   return (
     <div className="App">
       <TopBar toSetFile={fileToJSON}></TopBar>
-      <ContentArea myData={dataArray}></ContentArea>
+      <ContentArea myData={dataArray} loaded={dataLoaded}></ContentArea>
       
     </div>
   );
