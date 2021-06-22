@@ -2,19 +2,13 @@ import React, {useState, useEffect} from "react"
 
 function ContentArea (props) {
     const [current, setCurrent] = useState([])
-    const [selectedEl, setSelectedEl] = useState("")
-
-    const initialElements = () => {
-        //let firstLevel = props.myData.find((item) => item.parent === "1")
-        //let firstArray = props.myData.filter((el)=> el.parent === firstLevel.id)
-        setCurrent(props.myData);
-    }
+    
 
     useEffect(()=> {
         if (props.loaded) {
-            initialElements()
+            setCurrent(props.myData)
         }
-    }, [props.loaded])
+    }, [props.loaded, props.myData, setCurrent])
 
     const displayElements = (topParent = "1") => {
         let result = []
@@ -45,13 +39,14 @@ function ContentArea (props) {
     )
 }
 
-const style = {display:"flex", flexDirection:"column", backgroundColor:"violet", height:"content", width:"content", padding:".2rem 1rem", margin:".2rem 1rem", border:"4px solid gray"}
+const style = {display:"flex", flexDirection:"row", height:"content", width:"content", padding:".2rem 1rem", margin:".2rem 1rem"}
 
 function ObjectDisplay (props) {
 
     return (<div className="Object" style={style}>
         {props.label && <LabelDisplay key={props.label.id} value={props.label.value}></LabelDisplay>}
-        {props.children}</div>)
+        <div className="ObjectContents" style={{display:"flex", flexDirection:"column", backgroundColor:"pink", height:"content", width:"content", padding:".2rem 1rem", margin:".2rem 1rem", border:"4px solid grey"}}>{props.children}</div>
+        </div>)
 }
 
 function LabelDisplay (props) {
@@ -71,9 +66,9 @@ function ValueDisplay (props) {
 function ArrayDisplay (props) {
 
 
-    return (<div className="Array" style={{display:"flex", backgroundColor:"pink", height:"content", width:"content", padding:".2rem 1rem", margin:".2rem 1rem"}}>
+    return (<div className="Array" style={{display:"flex", flexDirection:"row", height:"content", width:"content", padding:".2rem 1rem", margin:".2rem 1rem"}}>
         {props.label && <LabelDisplay key={props.label.id} value={props.label.value}></LabelDisplay>}
-        {props.children}</div>)
+        <div className="ArrayContents" style={{display:"flex", flexDirection:"row", backgroundColor:"pink", height:"content", width:"content", padding:".2rem 1rem", margin:".2rem 1rem", border:"4px solid brown"}}>{props.children}</div></div>)
 }
 
 export default ContentArea;
