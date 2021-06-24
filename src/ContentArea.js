@@ -25,7 +25,7 @@ function ContentArea (props) {
         let secondHalf = current.slice(myPos + 1)
         if (delElement) {
             if (myElement.label) {
-                // Figure this out
+                firstHalf.pop()
             }
             setCurrent(firstHalf.concat(secondHalf))
         }
@@ -95,7 +95,7 @@ function ContentArea (props) {
                 result.push(<LineBetween insert={insertElement} myBefore={el.id} key={el.id + "line after"}></LineBetween>)
             }
             if (el.type === "number" || el.type === "string" || el.type === "boolean") {
-                result.push(<ValueDisplay key={el.id} id={el.id} value={el.value} label={label} change={changeElement}></ValueDisplay>)
+                result.push(<ValueDisplay type={el.type} key={el.id} id={el.id} value={el.value} label={label} change={changeElement}></ValueDisplay>)
                 result.push(<LineBetween insert={insertElement} myBefore={el.id} key={el.id + "line after"}></LineBetween>)
             }
         }
@@ -114,7 +114,7 @@ function ObjectDisplay (props) {
 
     return (<div className="Object" style={{display:"flex", flexDirection:"row", height:"content", width:"content", padding:".2rem 1rem", margin:".2rem 1rem"}}>
         {props.label && <LabelDisplay change={props.change} key={props.label.id} id={props.label.id} value={props.label.value}></LabelDisplay>}
-        <div className="ObjectContents" style={{display:"flex", flexDirection:"column", backgroundColor:"pink", height:"content", width:"content", padding:".2rem 1rem", margin:".2rem 1rem", border:"4px solid grey"}}>{props.children}</div>
+        <div className="ObjectContents" style={{display:"flex", flexDirection:"column", backgroundColor:"pink", height:"content", width:"content", padding:".2rem 1rem", margin:".2rem 1rem", border:"4px solid grey", borderRadius:"1rem"}}>{props.children}</div>
         </div>)
 }
 
@@ -139,12 +139,12 @@ function ValueDisplay (props) {
     if (editing) {
         return (<div className="Value" style={{display:"flex", alignItems:"center", backgroundColor:"lightpink", height:"content", width:"content", padding:".2rem 1rem", margin:".2rem 1rem"}} onBlur={() => {setEditing(false); props.change(props.id, myValue)}} >
             {props.label && <LabelDisplay key={props.label.id} id={props.label.id} value={props.label.value} change={props.change}></LabelDisplay>}
-            <input type="text" defaultValue={myValue} onChange={(e) => setMyValue(e.target.value)}></input><p style={{color:"blue"}}>{props.type}</p></div>)
+            <input type="text" defaultValue={myValue} onChange={(e) => setMyValue(e.target.value)}></input><p style={{color:"rgb(0,0,255,.5)", margin:"0 1rem"}}>{props.type}</p><div onClick={() => props.change(props.id, myValue, true)}><p style={{color:"crimson"}} >Delete Entry</p></div></div>)
     }
     else {
         return (<div className="Value" style={{display:"flex", alignItems:"center", backgroundColor:"lightpink", height:"content", width:"content", padding:".2rem 1rem", margin:".2rem 1rem"}} onClick={() => setEditing(true)} >
             {props.label && <LabelDisplay key={props.label.id} id={props.label.id} value={props.label.value} change={props.change}></LabelDisplay>}
-            <p>{myValue}</p><p style={{color:"blue"}}>{props.type}</p></div>)
+            <p>{myValue}</p><p style={{color:"rgb(0,0,255,.5)", margin:"0 1rem"}}>{props.type}</p></div>)
     }
 }
 
@@ -157,8 +157,8 @@ function ArrayDisplay (props) {
 }
 
 function LineBetween (props) {
-    const defaultStyle = {minHeight:".5rem", minWidth:".5rem", transition:"min-height .3s, min-width .3s"}
-    const hoverStyle = {minHeight:"1rem", minWidth:"1rem", backgroundColor:"rgb(255,255,255,.3)", transition:"min-height .3s, min-width .3s"}
+    const defaultStyle = {minHeight:"1rem", minWidth:"1rem", transition:"min-height .3s, min-width .3s"}
+    const hoverStyle = {minHeight:"2rem", minWidth:"2rem", backgroundColor:"rgb(255,255,255,.3)", transition:"min-height .3s, min-width .3s"}
 
     const [myStyle, setMyStyle] = useState(defaultStyle)
 
