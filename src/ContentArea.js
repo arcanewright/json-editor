@@ -1,4 +1,5 @@
 import React, {useState, useEffect} from "react"
+import {v4 as uuidv4} from "uuid"
 
 function ContentArea (props) {
     const [current, setCurrent] = useState([])
@@ -10,22 +11,67 @@ function ContentArea (props) {
         }
     }, [props.loaded, props.myData, setCurrent])
 
+    const insertElement = (type, elBefore, first) => {
+
+        let resultArray = []
+        let position
+        let parent
+        if (first) {
+            parent = elBefore
+            position = 0
+        }
+        else {
+            parent = current.find((e) => e.id === elBefore).parent
+            position = current.findIndex((e) => e.id === elBefore)
+        }
+        let myuuid = uuidv4()
+        let resultingObj
+        if (parent === "1") {
+            let labeluuid = uuidv4()
+            let label = {type:"label", id:labeluuid, value:"", parent:parent}
+            resultArray.push(label)
+            resultingObj = {type:type, parent:parent, id:myuuid, value:"", label:labeluuid}
+        }
+        else if (current.find((e)=> e.id === parent) === "object") {
+            let labeluuid = uuidv4()
+            let label = {type:"label", id:labeluuid, value:"", parent:parent}
+            resultArray.push(label)
+            resultingObj = {type:type, parent:parent, id:myuuid, value:"", label:labeluuid}
+        }
+        else {
+            resultingObj = {type:type, parent:parent, id:myuuid, value:"", label:""}
+        }
+        resultArray.push(resultingObj)
+        let firstHalf = current.slice(0, position + 1)
+        let secondHalf = current.slice(position + 1)
+        let result = firstHalf.concat(resultArray, secondHalf)
+
+        setCurrent(result)
+    }
+
     const displayElements = (topParent = "1") => {
         let result = []
 
         let topLevel = current.filter(el => {return el.parent === topParent})
+        
+        result.push(<LineBetween insert={insertElement} myParent={topParent} first></LineBetween>)
 
         for (const el of topLevel) {
             let label = topLevel.find((e) => e.type === "label" && e.id === el.label)
 
             if (el.type === "object") {
                 result.push(<ObjectDisplay key={el.id} label={label}>{displayElements(el.id)}</ObjectDisplay>)
+                if (topParent !== "1") {
+                    result.push(<LineBetween insert={insertElement} myBefore={el.id}></LineBetween>)
+                }
             }
             if (el.type === "array") {
                 result.push(<ArrayDisplay key={el.id} label={label}>{displayElements(el.id)}</ArrayDisplay>)
+                result.push(<LineBetween insert={insertElement} myBefore={el.id}></LineBetween>)
             }
             if (el.type === "number" || el.type === "string" || el.type === "boolean") {
                 result.push(<ValueDisplay key={el.id} value={el.value} label={label}></ValueDisplay>)
+                result.push(<LineBetween insert={insertElement} myBefore={el.id}></LineBetween>)
             }
         }
 
@@ -39,11 +85,9 @@ function ContentArea (props) {
     )
 }
 
-const style = {display:"flex", flexDirection:"row", height:"content", width:"content", padding:".2rem 1rem", margin:".2rem 1rem"}
-
 function ObjectDisplay (props) {
 
-    return (<div className="Object" style={style}>
+    return (<div className="Object" style={{display:"flex", flexDirection:"row", height:"content", width:"content", padding:".2rem 1rem", margin:".2rem 1rem"}}>
         {props.label && <LabelDisplay key={props.label.id} value={props.label.value}></LabelDisplay>}
         <div className="ObjectContents" style={{display:"flex", flexDirection:"column", backgroundColor:"pink", height:"content", width:"content", padding:".2rem 1rem", margin:".2rem 1rem", border:"4px solid grey"}}>{props.children}</div>
         </div>)
@@ -66,9 +110,21 @@ function ValueDisplay (props) {
 function ArrayDisplay (props) {
 
 
-    return (<div className="Array" style={{display:"flex", flexDirection:"row", height:"content", width:"content", padding:".2rem 1rem", margin:".2rem 1rem"}}>
+    return (<div className="Array" style={{display:"flex", flexDirection:"row", flexWrap:"wrap", height:"content", width:"content", padding:".2rem 1rem", margin:".2rem 1rem"}}>
         {props.label && <LabelDisplay key={props.label.id} value={props.label.value}></LabelDisplay>}
         <div className="ArrayContents" style={{display:"flex", flexDirection:"row", backgroundColor:"pink", height:"content", width:"content", padding:".2rem 1rem", margin:".2rem 1rem", border:"4px solid brown"}}>{props.children}</div></div>)
+}
+
+function LineBetween (props) {
+    const defaultStyle = {minHeight:".5rem", minWidth:".5rem", transition:"min-height .3s, min-width .3s"}
+    const hoverStyle = {minHeight:"1rem", minWidth:"1rem", backgroundColor:"rgb(255,255,255,.3)", transition:"min-height .3s, min-width .3s"}
+
+    const [myStyle, setMyStyle] = useState(defaultStyle)
+
+    return (
+        <div onDragOver={(e) => {e.preventDefault(); setMyStyle(hoverStyle)}} onDragLeave={(e) => setMyStyle(defaultStyle)} onDrop={(e) => {console.log(e.dataTransfer.getData("text")); props.insert(e.dataTransfer.getData("text"), props.myBefore, props.first); setMyStyle(defaultStyle)}} className="line" style={myStyle}></div>
+    )
+
 }
 
 export default ContentArea;

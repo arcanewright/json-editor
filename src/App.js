@@ -64,11 +64,15 @@ function App() {
   return (
     <div className="App">
       <TopBar toSetFile={fileToJSON}></TopBar>
-      <ContentArea myData={dataArray} loaded={dataLoaded}></ContentArea>
+      <div className="topbuffer" style={{width:"100%", height:"4rem"}}></div>
+      <ContentArea myData={dataArray} loaded={dataLoaded} updateData={(el)=> setDataArray(el)}></ContentArea>
       
     </div>
   );
 }
+
+
+
 
 function TopBar (props) {
 
@@ -86,14 +90,33 @@ function TopBar (props) {
   }
 
   return (
-    <div className="TopBar" style={{display:"flex", alignItems:"center", backgroundColor: 'ghostwhite'}}>
+    <div className="TopBar" style={{display:"flex", alignItems:"center", backgroundColor: 'ghostwhite', position:"fixed"}}>
       <div className="title" style={{margin:"0 1rem", padding:"0 1rem"}}><h2>JSON Editor</h2></div>
       <div className="import" style={{margin:"0 1rem", padding:"0 1rem"}}><button onClick={(e) => setShowUploadAlert(true)}>Import JSON</button></div>
       <div className="export" style={{margin:"0 1rem", padding:"0 1rem"}}><button>Export JSON</button></div>
+      <div className="toolset" style={{display:"flex", flexDirection:"row", width:"content"}}>
+        <Tool type="object" tooltip="Object" icon="O"></Tool>
+        <Tool type="array" tooltip="Array" icon="A"></Tool>
+        <Tool type="string" tooltip="String" icon="S"></Tool>
+        <Tool type="number" tooltip="Number" icon="N"></Tool>
+        <Tool type="boolean" tooltip="Boolean" icon="B"></Tool>
+      </div>
+      
       {showUploadAlert ? <UploadAlert toClose={setShowUploadAlert} toSetFile={tryUploadFile} error={showUploadError}></UploadAlert> : null}
     </div>
   )
 }
+
+
+
+function Tool (props) {
+  return (
+    <div className={"tool " + props.type} draggable onDragStart={(e) => e.dataTransfer.setData("text", props.type)} style={{margin:"0 1rem", padding:".5rem 1rem", color:"blueviolet", border:"1px dotted blue", borderRadius:"1rem", backgroundColor:"skyblue"}}>{props.icon}</div>
+  )
+}
+
+
+
 function UploadAlert (props) {
 
   return (
