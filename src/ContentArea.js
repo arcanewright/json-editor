@@ -2,14 +2,17 @@ import React, {useState, useEffect} from "react"
 import {v4 as uuidv4} from "uuid"
 import "./ContentArea.css"
 
-function ContentArea (props) {
-    const [current, setCurrent] = useState([])
+//this is the bulk of the screen, where the JSON is displayed and manipulated
 
+function ContentArea (props) {
+    const [current, setCurrent] = useState([]) // a copy of the current data array; a bit duplicitive, but it's too ingrained to fix right now.
+
+    //sets the current Data to be that of the app
     useEffect(()=> {
         setCurrent(props.myData)
     }, [props.loaded, props.myData, setCurrent])
 
-
+    //function for modifying/deleting a data entry by its component
     const changeElement =  (id, newValue, delElement = false, type = "") => {
 
         console.log(id + newValue)
@@ -37,6 +40,7 @@ function ContentArea (props) {
 
     }
 
+    //func for creating a new element somewhere in the json
     const insertElement = (type, elBefore, first) => {
 
         let resultArray = []
@@ -77,6 +81,8 @@ function ContentArea (props) {
         props.updateData(result)
     }
 
+    //generation of the components
+
     const displayElements = (topParent = "1") => {
         let result = []
 
@@ -113,6 +119,8 @@ function ContentArea (props) {
     )
 }
 
+
+// an object component
 function ObjectDisplay (props) {
     const [deleting, setDeleting] = useState(false)
     let deleteMe
@@ -129,6 +137,8 @@ function ObjectDisplay (props) {
         </div>)
 }
 
+
+//the label displayed as part of other components
 function LabelDisplay (props) {
 
     const [editing, setEditing] = useState(false)
@@ -143,13 +153,17 @@ function LabelDisplay (props) {
 
 }
 
+
+//displaying of num, str, and bool entries
 function ValueDisplay (props) {
-    const [myValue, setMyValue] = useState(props.value)
-    const [editingValue, setEditingValue] = useState(false)
-    const [myType, setMyType] = useState(props.type)
+    const [myValue, setMyValue] = useState(props.value) //contents in string form
+    const [editingValue, setEditingValue] = useState(false) //whether its currently editing
+    const [myType, setMyType] = useState(props.type) //datatype in string form
     const [editingType, setEditingType] = useState(false)
-    const [deleting, setDeleting] = useState(false)
-    const [error, setError] = useState(false)
+    const [deleting, setDeleting] = useState(false) // whether the component is trying to delete itself
+    const [error, setError] = useState(false) // whether there is a type error here
+
+    //checking for type error
     const checkValueToType = () => {
         if (myType === "number") {
             return !isNaN(Number(myValue))
@@ -175,6 +189,7 @@ function ValueDisplay (props) {
         }
     }
 
+    //checks for type errors and updates the content area
     const trySet = () => {
         if (checkValueToType(myValue)) {
             props.change(props.id, myValue, false, myType)
@@ -187,6 +202,9 @@ function ValueDisplay (props) {
         }
     }
 
+    //Components of a value display
+
+
     let label
     if (props.label) {
         label = <LabelDisplay key={props.label.id} id={props.label.id} value={props.label.value} change={props.change}></LabelDisplay>
@@ -195,9 +213,8 @@ function ValueDisplay (props) {
         label = null
     }
 
-    let content
+    let content //same as value
     if (editingValue) {
-
         content = <input type="text" defaultValue={myValue} onChange={(e) => setMyValue(e.target.value)} autoFocus onBlur={() => setEditingValue(false)}></input>
     }
     else if (!myValue) {
@@ -237,9 +254,11 @@ function ValueDisplay (props) {
 
 
     return (<div className="Value" style={{display:"flex", alignItems:"center", backgroundColor:"lightpink", height:"content", width:"content", padding:".2rem 1rem", margin:".2rem 1rem", userSelect:"initial"}} onBlur={() => {trySet()}} >
-        {label} {content} {typeInfo} {errorDisplay} {deleteMe}</div>)
+        {label} {content} {typeInfo} {errorDisplay} {deleteMe}
+        </div>)
 }
 
+//displays arrays
 function ArrayDisplay (props) {
     
     const [deleting, setDeleting] = useState(false)
@@ -258,6 +277,7 @@ function ArrayDisplay (props) {
         </div>)
 }
 
+//is the component between other components, and accepts the draggables form the toolbar
 function LineBetween (props) {
     const defaultStyle = {minHeight:"1rem", minWidth:"2rem", transition:"min-height .3s, min-width .3s"}
     const hoverStyle = {minHeight:"2rem", minWidth:"2rem", backgroundColor:"rgb(255,255,255,.3)", transition:"min-height .3s, min-width .3s"}

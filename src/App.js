@@ -1,23 +1,29 @@
 import './App.css';
 import ContentArea from "./ContentArea"
-import {useState} from "react"
+import {useEffect, useState} from "react"
 import {v4 as uuidv4} from "uuid"
 
 function App() {
-  const [dataArray, setDataArray] = useState([])
-  const [title, setTitle] = useState("")
-  const [dataLoaded, setDataLoaded] = useState(false)
-  const [globError, setGlobError] = useState(false)
-  const [showDownload, setShowDownload] = useState(false)
-  const [downloadURL, setDownloadURL] = useState("")
-  const [sendData, setSendData] = useState(false)
+  const [dataArray, setDataArray] = useState([]) //where the final data lives
+  const [title, setTitle] = useState("") //the file's title
+  const [dataLoaded, setDataLoaded] = useState(false) //checks if data was successfully read
+  const [globError, setGlobError] = useState(false) //if there is a problem exporting
+  const [showDownload, setShowDownload] = useState(false) //show the download box
+  const [downloadURL, setDownloadURL] = useState("") //the download url
 
+  //convert an uploaded file to ussable data
   const fileToJSON = (file) => {
     setTitle(file.name)
     let reader = new FileReader();
     reader.onloadend = (e) => continueToJSON(e.target.result)
     reader.readAsText(file)
   }
+
+  useEffect(()=> {
+    return function cleanUp() {
+      URL.revokeObjectURL(downloadURL)
+    }
+  })
 
   const continueToJSON = (jstring) => {
     let object = JSON.parse(jstring)
@@ -26,11 +32,11 @@ function App() {
 
   const createDataFromJSON = (jsonObj) => {
     let result = getDataFromEntry(jsonObj, "1")
-
-
     setDataArray(result)
     setDataLoaded(true)
   }
+
+  //takes the json object and breaks it down recursively, based on type, into descriptive components
 
   const getDataFromEntry = (entry, parent, label = "") => {
     let newArray = []
@@ -62,9 +68,10 @@ function App() {
     return newArray
 
   }
+
+  //attempts to export data, and creates the blob and its url
   
   const exportData = () => {
-    setSendData(true)
     
     if (!(dataArray.find(e=> e.parent === "1"))) {
       alert("Cannot export an empty workspace!")
@@ -81,6 +88,7 @@ function App() {
     }
   }
 
+  // this recursively pulls the entries in the data array, and turns them into their parents children (either an object or array)
 
   const getEntriesFromData = (parentID, parentType) => {
     let children = dataArray.filter((e)=> e.parent === parentID)
@@ -161,7 +169,7 @@ function App() {
     <div className="App">
       <TopBar toSetTitle={setTitle} title={title} toSetFile={fileToJSON} toExport={exportData} toShowDownload={setShowDownload} boolDownload={showDownload} downurl={downloadURL} expError={globError} toChangeErr={setGlobError} newDoc={() => createDataFromJSON({})}></TopBar>
       <div className="topbuffer" style={{width:"100%", height:"10rem"}}></div>
-      <ContentArea myData={dataArray} sendData={sendData} loaded={dataLoaded} updateData={(el)=> {setDataArray(el); setSendData(false)}}></ContentArea>
+      <ContentArea myData={dataArray} loaded={dataLoaded} updateData={(el)=> {setDataArray(el)}}></ContentArea>
       
     </div>
   );
@@ -169,12 +177,15 @@ function App() {
 
 
 
+//Menu/tool bar 
 
 function TopBar (props) {
 
-  const [showUploadAlert, setShowUploadAlert] = useState(false)
-  const [showUploadError, setShowUploadError] = useState(false)
-  const tryUploadFile = (file) => {
+  const [showUploadAlert, setShowUploadAlert] = useState(false) //Display the upload alert or not
+  const [showUploadError, setShowUploadError] = useState(false) //SHow an error after a failed upload
+  const [showMenu, setShowMenu] = useState(false) // show the side menu (Info)
+
+  const tryUploadFile = (file) => { 
     if (file.type.includes("json")) {
       props.toSetFile(file)
       setShowUploadAlert(false)
@@ -184,7 +195,8 @@ function TopBar (props) {
       setShowUploadError(true)
     }
   }
-  const tryCreateNew = () => {
+
+  const tryCreateNew = () => { // for the "Create New" button
     props.newDoc()
   }
 
@@ -205,11 +217,13 @@ function TopBar (props) {
       
       {showUploadAlert ? <UploadAlert toClose={setShowUploadAlert} toSetFile={tryUploadFile} error={showUploadError}></UploadAlert> : null}
       {props.boolDownload ? <DownloadAlert expError={props.expError} title={props.title} toClose={e => {props.toShowDownload(e); props.toChangeErr(false)}} fileURL={props.downurl}></DownloadAlert> : null}
+      {showMenu ? <Menu toClose={setShowMenu}></Menu> : null}
+      <div className="openMenuButton" style={{userSelect:'none'}} onClick={(e) => setShowMenu(true)}><h3>Info</h3></div>
     </div>
   )
 }
 
-
+// Component for draggable tool, using HTML 5 Draggables
 
 function Tool (props) {
   return (
@@ -223,7 +237,25 @@ function Tool (props) {
   )
 }
 
+// Side menu with website and description
 
+function Menu (props) {
+  return (
+    <div className="menu">
+      <div className="GrayedOut" style={{backgroundColor: 'rgba(128, 128, 128, 0.5)', height:"100vh", width:"100vw", position:"fixed", left:0, top:0}} onClick={() => props.toClose(false)}></div>
+      <div className="menuarea" style={{backgroundColor: 'ghostwhite', height:"100vh", width:"20rem", position:"absolute", right:"0", top:"0", padding:"1rem"}}>
+        <div className="aw"><a style={{textDecoration:"none"}} href="https://www.arcanewright.com/"><h3>ArcaneWright.com</h3></a></div>
+        <p>This is a project started and completed in the week of 6/21/2021, completed 6/25/2021.</p>
+        <p>This is a JSON Editor. One can import an exisitng json document, or create a new one. Different entries (objects, arrays, strings, numbers, and booleans) can be dragged from the toolbar, and onto the content area. The app builds that information, and allows one to build their own JSON from scratch. </p>
+        <p>One can change labels and entires by clicking on them, and making the desired changes. The type system validates entries based on type, and throws a warning when the entry is not correctly typed. When exporting, mistyped entries become <code>null</code>.</p>
+        <p>Possible improvements:</p>
+        <p>Graphic design, Better click targets, Nicer dragging feel, More options for naming and exporting</p>
+      </div>
+    </div>
+  )
+}
+
+// dialog for uploading a file, using both input and draggable files
 
 function UploadAlert (props) {
 
@@ -241,6 +273,8 @@ function UploadAlert (props) {
   )
 }
 
+// dialog for displaying the exported JSON file
+
 function DownloadAlert (props) {
 
   return (
@@ -248,7 +282,7 @@ function DownloadAlert (props) {
       <div className="GrayedOut" style={{backgroundColor: 'rgba(128, 128, 128, 0.5)', height:"100vh", width:"100vw", position:"fixed", left:0, top:0}}>
       </div>
       <div className="DownloadWindow" style={{backgroundColor: 'ghostwhite', height:"content", width:"20rem", position:"absolute", left:"calc(50vw - 10rem)", top:"25vh"}}>
-        <div className="closeX" style={{color:"red", userSelect:"none", position:"absolute", right:0, top:0, padding:".5rem 1rem" }} onClick={()=> props.toClose(false)}>X</div>
+        <div className="closeX" style={{color:"red", userSelect:"none", position:"absolute", right:0, top:0, padding:".5rem 1rem" }} onClick={()=> {URL.revokeObjectURL(props.fileURL); props.toClose(false)}}>X</div>
         {props.expError && <h3 style={{color:"red"}}>Warning: TypeError(s) detected</h3>}
         <div className="padding" style={{height:"2rem"}}></div>
         <a href={props.fileURL} download={props.title}>Download Here</a>
