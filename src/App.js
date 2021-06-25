@@ -6,7 +6,6 @@ import {v4 as uuidv4} from "uuid"
 function App() {
   const [dataArray, setDataArray] = useState([])
   const [title, setTitle] = useState("")
-  const [rawJSONObj, setRawJSONObj] = useState({abc:"xyz", def:{g:"h", i:"j"}, klm:["n","o","p", "q"]})
   const [dataLoaded, setDataLoaded] = useState(false)
   const [globError, setGlobError] = useState(false)
   const [showDownload, setShowDownload] = useState(false)
@@ -22,7 +21,6 @@ function App() {
 
   const continueToJSON = (jstring) => {
     let object = JSON.parse(jstring)
-    setRawJSONObj(object)
     createDataFromJSON(object)
   }
 
@@ -64,14 +62,11 @@ function App() {
     return newArray
 
   }
-
+  
   const exportData = () => {
     setSendData(true)
     
-    if (globError) {
-      alert("Cannot export while Type Errors are present!")
-    }
-    else if (!(dataArray.find(e=> e.parent === "1"))) {
+    if (!(dataArray.find(e=> e.parent === "1"))) {
       alert("Cannot export an empty workspace!")
     }
     else {
@@ -102,6 +97,10 @@ function App() {
           }
           else if (child.type === "number") {
             result.push(Number(child.value))
+            if (isNaN(Number(child.value))) {
+              alert("Number Type Error at " + child.value + " (not a number)")
+              setGlobError(true)
+            }
           }
           else if (child.type === "boolean") {
             if (child.value === "true") {
@@ -109,6 +108,11 @@ function App() {
             }
             else if (child.value === "false") {
               result.push(false)
+            }
+            else {
+              result.push(null)
+              alert("Boolean Type Error at "+ child.value + " (not true or false)")
+              setGlobError(true)
             }
           }
         }
@@ -128,6 +132,10 @@ function App() {
           }
           else if (child.type === "number") {
             result[label.value] = Number(child.value)
+            if (isNaN(Number(child.value))) {
+              alert("Number Type Error at "+ label.value + " : " + child.value + " (not a number)")
+              setGlobError(true)
+            }
           }
           else if (child.type === "boolean") {
             if (child.value === "true") {
@@ -136,19 +144,24 @@ function App() {
             else if (child.value === "false") {
               result[label.value] = false
             }
+            else {
+              result[label.value] = null
+              alert("Boolean Type Error at "+ label.value + " : " + child.value + " (not true or false)")
+              setGlobError(true)
+            }
           }
         }
       }
     }
-    console.log(result)
+
     return result;
   }
 
   return (
     <div className="App">
-      <TopBar toSetTitle={setTitle} title={title} toSetFile={fileToJSON} toExport={exportData} toShowDownload={setShowDownload} boolDownload={showDownload} downurl={downloadURL} newDoc={() => createDataFromJSON({})}></TopBar>
-      <div className="topbuffer" style={{width:"100%", height:"4rem"}}></div>
-      <ContentArea myData={dataArray} sendData={sendData} toError={setGlobError} loaded={dataLoaded} updateData={(el)=> {setDataArray(el); setSendData(false)}} updateError={(e) => setGlobError(e)}></ContentArea>
+      <TopBar toSetTitle={setTitle} title={title} toSetFile={fileToJSON} toExport={exportData} toShowDownload={setShowDownload} boolDownload={showDownload} downurl={downloadURL} expError={globError} toChangeErr={setGlobError} newDoc={() => createDataFromJSON({})}></TopBar>
+      <div className="topbuffer" style={{width:"100%", height:"10rem"}}></div>
+      <ContentArea myData={dataArray} sendData={sendData} loaded={dataLoaded} updateData={(el)=> {setDataArray(el); setSendData(false)}}></ContentArea>
       
     </div>
   );
@@ -188,10 +201,10 @@ function TopBar (props) {
         <Tool type="number" tooltip="Number" icon="N"></Tool>
         <Tool type="boolean" tooltip="Boolean" icon="B"></Tool>
       </div>
-      <div className="docTitle" style={{margin:"0 1rem", padding:"0 1rem"}}><input type="text" onChange={(e) => props.toSetTitle(e.target.value)} defaultValue={props.title}></input></div>
+      <div className="docTitle" style={{margin:"0 1rem", padding:"0 1rem"}}><input type="text" onChange={(e) => props.toSetTitle(e.target.value)} style={{backgroundColor:"cornflowerblue", borderRadius:".5rem", padding:"0 .5rem"}} defaultValue={props.title}></input></div>
       
       {showUploadAlert ? <UploadAlert toClose={setShowUploadAlert} toSetFile={tryUploadFile} error={showUploadError}></UploadAlert> : null}
-      {props.boolDownload ? <DownloadAlert title={props.title} toClose={e => props.toShowDownload(e)} fileURL={props.downurl}></DownloadAlert> : null}
+      {props.boolDownload ? <DownloadAlert expError={props.expError} title={props.title} toClose={e => {props.toShowDownload(e); props.toChangeErr(false)}} fileURL={props.downurl}></DownloadAlert> : null}
     </div>
   )
 }
@@ -236,6 +249,7 @@ function DownloadAlert (props) {
       </div>
       <div className="DownloadWindow" style={{backgroundColor: 'ghostwhite', height:"content", width:"20rem", position:"absolute", left:"calc(50vw - 10rem)", top:"25vh"}}>
         <div className="closeX" style={{color:"red", userSelect:"none", position:"absolute", right:0, top:0, padding:".5rem 1rem" }} onClick={()=> props.toClose(false)}>X</div>
+        {props.expError && <h3 style={{color:"red"}}>Warning: TypeError(s) detected</h3>}
         <div className="padding" style={{height:"2rem"}}></div>
         <a href={props.fileURL} download={props.title}>Download Here</a>
         <div className="padding" style={{height:"2rem"}}></div>

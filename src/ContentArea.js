@@ -4,29 +4,11 @@ import "./ContentArea.css"
 
 function ContentArea (props) {
     const [current, setCurrent] = useState([])
-    const [errorElements, setErrorElements] = useState([])
 
     useEffect(()=> {
         setCurrent(props.myData)
     }, [props.loaded, props.myData, setCurrent])
 
-    useEffect(()=> {
-        if (errorElements.length > 0) {
-            props.updateError(true)
-        }
-        else {
-            props.updateError(false)
-        }
-    }, [errorElements, props])
-
-    const addOrRemoveError = (id) => {
-        if (errorElements.findIndex((e) => e === id) === -1) {
-            errorElements.push(id)
-        }
-        else {
-            errorElements.splice(errorElements.findIndex((e) => e === id), 1)
-        }
-    }
 
     const changeElement =  (id, newValue, delElement = false, type = "") => {
 
@@ -116,7 +98,7 @@ function ContentArea (props) {
                 result.push(<LineBetween insert={insertElement} myBefore={el.id} key={el.id + "line after"}></LineBetween>)
             }
             if (el.type === "number" || el.type === "string" || el.type === "boolean") {
-                result.push(<ValueDisplay type={el.type} key={el.id} id={el.id} value={el.value} label={label} change={changeElement} onError={addOrRemoveError}></ValueDisplay>)
+                result.push(<ValueDisplay type={el.type} key={el.id} id={el.id} value={el.value} label={label} change={changeElement}></ValueDisplay>)
                 result.push(<LineBetween insert={insertElement} myBefore={el.id} key={el.id + "line after"}></LineBetween>)
             }
         }
@@ -196,11 +178,10 @@ function ValueDisplay (props) {
     const trySet = () => {
         if (checkValueToType(myValue)) {
             props.change(props.id, myValue, false, myType)
-            props.onError(props.id)
             setError(false)
         }
         else {
-            props.onError(props.id)
+            props.change(props.id, myValue, false, myType)
             setEditingValue(true)
             setError(true)
         }
