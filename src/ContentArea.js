@@ -1,18 +1,34 @@
 import React, {useState, useEffect} from "react"
 import {v4 as uuidv4} from "uuid"
+import "./ContentArea.css"
 
 function ContentArea (props) {
     const [current, setCurrent] = useState([])
-    
+    const [errorElements, setErrorElements] = useState([])
 
     useEffect(()=> {
-        if (props.loaded) {
-            setCurrent(props.myData)
-        }
+        setCurrent(props.myData)
     }, [props.loaded, props.myData, setCurrent])
 
+    useEffect(()=> {
+        if (errorElements.length > 0) {
+            props.updateError(true)
+        }
+        else {
+            props.updateError(false)
+        }
+    }, [errorElements, props])
 
-    const changeElement =  (id, newValue, delElement = false) => {
+    const addOrRemoveError = (id) => {
+        if (errorElements.findIndex((e) => e === id) === -1) {
+            errorElements.push(id)
+        }
+        else {
+            errorElements.splice(errorElements.findIndex((e) => e === id), 1)
+        }
+    }
+
+    const changeElement =  (id, newValue, delElement = false, type = "") => {
 
         console.log(id + newValue)
         let myPos = current.findIndex((e) => e.id === id)
@@ -20,7 +36,9 @@ function ContentArea (props) {
         console.log(myPos)
         console.log(myElement)
         myElement.value = newValue
-
+        if (type) {
+            myElement.type = type
+        }
         let firstHalf = current.slice(0, myPos)
         let secondHalf = current.slice(myPos + 1)
         if (delElement) {
@@ -28,9 +46,11 @@ function ContentArea (props) {
                 firstHalf.pop()
             }
             setCurrent(firstHalf.concat(secondHalf))
+            props.updateData(firstHalf.concat(secondHalf))
         }
         else {
             setCurrent(firstHalf.concat([myElement], secondHalf))
+            props.updateData(firstHalf.concat([myElement], secondHalf))
         }
 
     }
@@ -72,6 +92,7 @@ function ContentArea (props) {
         let result = firstHalf.concat(resultArray, secondHalf)
 
         setCurrent(result)
+        props.updateData(result)
     }
 
     const displayElements = (topParent = "1") => {
@@ -95,7 +116,7 @@ function ContentArea (props) {
                 result.push(<LineBetween insert={insertElement} myBefore={el.id} key={el.id + "line after"}></LineBetween>)
             }
             if (el.type === "number" || el.type === "string" || el.type === "boolean") {
-                result.push(<ValueDisplay type={el.type} key={el.id} id={el.id} value={el.value} label={label} change={changeElement}></ValueDisplay>)
+                result.push(<ValueDisplay type={el.type} key={el.id} id={el.id} value={el.value} label={label} change={changeElement} onError={addOrRemoveError}></ValueDisplay>)
                 result.push(<LineBetween insert={insertElement} myBefore={el.id} key={el.id + "line after"}></LineBetween>)
             }
         }
@@ -111,10 +132,18 @@ function ContentArea (props) {
 }
 
 function ObjectDisplay (props) {
-
+    const [deleting, setDeleting] = useState(false)
+    let deleteMe
+    if (deleting) {
+        deleteMe = <div className="deleter" onClick={() => props.change(props.id, "", true, "object")}><button autoFocus style={{color:"crimson", userSelect:"none"}} onBlur={() => setDeleting(false)}>Delete Object</button></div>
+    }
+    else {
+        deleteMe = <div className="deleter" onClick={() => setDeleting(true)} style={{padding:"0 .5rem"}}><p>X</p></div>
+    }
     return (<div className="Object" style={{display:"flex", flexDirection:"row", height:"content", width:"content", padding:".2rem 1rem", margin:".2rem 1rem"}}>
         {props.label && <LabelDisplay change={props.change} key={props.label.id} id={props.label.id} value={props.label.value}></LabelDisplay>}
         <div className="ObjectContents" style={{display:"flex", flexDirection:"column", backgroundColor:"pink", height:"content", width:"content", padding:".2rem 1rem", margin:".2rem 1rem", border:"4px solid grey", borderRadius:"1rem"}}>{props.children}</div>
+        {deleteMe}
         </div>)
 }
 
@@ -124,7 +153,7 @@ function LabelDisplay (props) {
     const [myValue, setMyValue] = useState(props.value)
 
     if (editing) {
-        return (<div className="Label" style={{backgroundColor:"salmon", height:"content", width:"content", padding:".2rem 1rem", margin:".2rem 1rem"}} onBlur={() => {setEditing(false); props.change(props.id, myValue)}} ><input type="text" defaultValue={myValue} onChange={(e) => setMyValue(e.target.value)}></input></div>)
+        return (<div className="Label" style={{backgroundColor:"salmon", height:"content", width:"content", padding:".2rem 1rem", margin:".2rem 1rem"}} onBlur={() => {setEditing(false); props.change(props.id, myValue)}} ><input autoFocus type="text" defaultValue={myValue} onChange={(e) => setMyValue(e.target.value)}></input></div>)
     }
     else {
         return (<div className="Label" style={{backgroundColor:"salmon", height:"content", width:"content", padding:".2rem 1rem", margin:".2rem 1rem"}} onClick={() => setEditing(true)}><p>{myValue}</p></div>)
@@ -133,37 +162,129 @@ function LabelDisplay (props) {
 }
 
 function ValueDisplay (props) {
-    const [editing, setEditing] = useState(false)
     const [myValue, setMyValue] = useState(props.value)
+    const [editingValue, setEditingValue] = useState(false)
+    const [myType, setMyType] = useState(props.type)
+    const [editingType, setEditingType] = useState(false)
+    const [deleting, setDeleting] = useState(false)
+    const [error, setError] = useState(false)
+    const checkValueToType = () => {
+        if (myType === "number") {
+            return !isNaN(Number(myValue))
+        }
+        else if (myType === "boolean") {
+            if (myValue === "true" || myValue === "false") {
+                return true
+            }
+            else {
+                return false
+            }
+        }
+        else if (myType === "string") {
+            if (typeof myValue === "string") {
+                return true
+            }
+            else {
+                return false
+            }
+        }
+        else {
+            return false
+        }
+    }
 
-    if (editing) {
-        return (<div className="Value" style={{display:"flex", alignItems:"center", backgroundColor:"lightpink", height:"content", width:"content", padding:".2rem 1rem", margin:".2rem 1rem"}} onBlur={() => {setEditing(false); props.change(props.id, myValue)}} >
-            {props.label && <LabelDisplay key={props.label.id} id={props.label.id} value={props.label.value} change={props.change}></LabelDisplay>}
-            <input type="text" defaultValue={myValue} onChange={(e) => setMyValue(e.target.value)}></input><p style={{color:"rgb(0,0,255,.5)", margin:"0 1rem"}}>{props.type}</p><div onClick={() => props.change(props.id, myValue, true)}><p style={{color:"crimson"}} >Delete Entry</p></div></div>)
+    const trySet = () => {
+        if (checkValueToType(myValue)) {
+            props.change(props.id, myValue, false, myType)
+            props.onError(props.id)
+            setError(false)
+        }
+        else {
+            props.onError(props.id)
+            setEditingValue(true)
+            setError(true)
+        }
+    }
+
+    let label
+    if (props.label) {
+        label = <LabelDisplay key={props.label.id} id={props.label.id} value={props.label.value} change={props.change}></LabelDisplay>
     }
     else {
-        return (<div className="Value" style={{display:"flex", alignItems:"center", backgroundColor:"lightpink", height:"content", width:"content", padding:".2rem 1rem", margin:".2rem 1rem"}} onClick={() => setEditing(true)} >
-            {props.label && <LabelDisplay key={props.label.id} id={props.label.id} value={props.label.value} change={props.change}></LabelDisplay>}
-            <p>{myValue}</p><p style={{color:"rgb(0,0,255,.5)", margin:"0 1rem"}}>{props.type}</p></div>)
+        label = null
     }
+
+    let content
+    if (editingValue) {
+
+        content = <input type="text" defaultValue={myValue} onChange={(e) => setMyValue(e.target.value)} autoFocus onBlur={() => setEditingValue(false)}></input>
+    }
+    else if (!myValue) {
+        content = <p onClick={() => setEditingValue(true)} style={{color:"grey"}}>blank</p>
+    }
+    else {
+        content = <p onClick={() => setEditingValue(true)}>{myValue}</p>
+    }
+
+    let errorDisplay
+    if (error) {
+        errorDisplay = <div className="error"><p>Type Error</p></div>
+    }
+    else {
+        errorDisplay = null
+    }
+
+    let deleteMe
+    if (deleting) {
+        deleteMe = <div className="deleter" onClick={() => props.change(props.id, myValue, true)}><button autoFocus style={{color:"crimson", userSelect:"none"}} onBlur={() => setDeleting(false)}>Delete Entry</button></div>
+    }
+    else {
+        deleteMe = <div className="deleter" onClick={() => setDeleting(true)} style={{padding:"0 .5rem"}}><p>X</p></div>
+    }
+
+    let typeInfo
+    if (editingType) {
+        typeInfo = <select style={{color:"rgb(0,0,255,.5)", margin:"0 1rem"}} value={myType} onChange={(e) => setMyType(e.target.value)} autoFocus onBlur={() => setEditingType(false)}>
+            <option value="string">string</option>
+            <option value="boolean">boolean</option>
+            <option value="number">number</option>
+        </select>
+    }
+    else {
+        typeInfo = <p style={{color:"rgb(0,0,255,.5)", margin:"0 1rem"}} onClick={() => setEditingType(true)}>{myType}</p>
+    }
+
+
+    return (<div className="Value" style={{display:"flex", alignItems:"center", backgroundColor:"lightpink", height:"content", width:"content", padding:".2rem 1rem", margin:".2rem 1rem", userSelect:"initial"}} onBlur={() => {trySet()}} >
+        {label} {content} {typeInfo} {errorDisplay} {deleteMe}</div>)
 }
 
 function ArrayDisplay (props) {
+    
+    const [deleting, setDeleting] = useState(false)
+    let deleteMe
+    if (deleting) {
+        deleteMe = <div className="deleter" onClick={() => props.change(props.id, "", true, "array")}><button autoFocus style={{color:"crimson", userSelect:"none"}} onBlur={() => setDeleting(false)}>Delete Array</button></div>
+    }
+    else {
+        deleteMe = <div className="deleter" onClick={() => setDeleting(true)} style={{padding:"0 .5rem"}}><p>X</p></div>
+    }
 
-
-    return (<div className="Array" style={{display:"flex", flexDirection:"row", flexWrap:"wrap", height:"content", width:"content", padding:".2rem 1rem", margin:".2rem 1rem"}}>
+    return (<div className="Array" style={{display:"flex", flexDirection:"row", height:"content", width:"content", padding:".2rem 1rem", margin:".2rem 1rem", alignItems:"center", justifyContent:"center"}}>
         {props.label && <LabelDisplay key={props.label.id} id={props.label.id} value={props.label.value} change={props.change}></LabelDisplay>}
-        <div className="ArrayContents" style={{display:"flex", flexDirection:"row", backgroundColor:"pink", height:"content", width:"content", padding:".2rem 1rem", margin:".2rem 1rem", border:"4px solid brown"}}>{props.children}</div></div>)
+        <div className="ArrayContents" style={{display:"flex", flexDirection:"row", flexWrap:"wrap", backgroundColor:"pink", height:"content", width:"content", padding:".2rem 1rem", margin:".2rem 1rem", border:"4px solid brown"}}>{props.children}</div>
+        {deleteMe}
+        </div>)
 }
 
 function LineBetween (props) {
-    const defaultStyle = {minHeight:"1rem", minWidth:"1rem", transition:"min-height .3s, min-width .3s"}
+    const defaultStyle = {minHeight:"1rem", minWidth:"2rem", transition:"min-height .3s, min-width .3s"}
     const hoverStyle = {minHeight:"2rem", minWidth:"2rem", backgroundColor:"rgb(255,255,255,.3)", transition:"min-height .3s, min-width .3s"}
 
     const [myStyle, setMyStyle] = useState(defaultStyle)
 
     return (
-        <div onDragOver={(e) => {e.preventDefault(); setMyStyle(hoverStyle)}} onDragLeave={(e) => setMyStyle(defaultStyle)} onDrop={(e) => {console.log(e.dataTransfer.getData("text")); props.insert(e.dataTransfer.getData("text"), props.myBefore, props.first); setMyStyle(defaultStyle)}} className="line" style={myStyle}></div>
+        <div onDragStart={(e)=> setMyStyle(hoverStyle)} onDragOver={(e) => {e.preventDefault(); setMyStyle(hoverStyle)}} onDragLeave={(e) => setMyStyle(defaultStyle)} onDrop={(e) => {console.log(e.dataTransfer.getData("text")); props.insert(e.dataTransfer.getData("text"), props.myBefore, props.first); setMyStyle(defaultStyle)}} className="line" style={myStyle}></div>
     )
 
 }

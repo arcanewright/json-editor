@@ -5,12 +5,16 @@ import {v4 as uuidv4} from "uuid"
 
 function App() {
   const [dataArray, setDataArray] = useState([])
-  const [rawFile, setRawFile] = useState("")
+  const [title, setTitle] = useState("")
   const [rawJSONObj, setRawJSONObj] = useState({abc:"xyz", def:{g:"h", i:"j"}, klm:["n","o","p", "q"]})
   const [dataLoaded, setDataLoaded] = useState(false)
+  const [globError, setGlobError] = useState(false)
+  const [showDownload, setShowDownload] = useState(false)
+  const [downloadURL, setDownloadURL] = useState("")
+  const [sendData, setSendData] = useState(false)
 
   const fileToJSON = (file) => {
-    setRawFile(file)
+    setTitle(file.name)
     let reader = new FileReader();
     reader.onloadend = (e) => continueToJSON(e.target.result)
     reader.readAsText(file)
@@ -61,11 +65,90 @@ function App() {
 
   }
 
+  const exportData = () => {
+    setSendData(true)
+    
+    if (globError) {
+      alert("Cannot export while Type Errors are present!")
+    }
+    else if (!(dataArray.find(e=> e.parent === "1"))) {
+      alert("Cannot export an empty workspace!")
+    }
+    else {
+      let obj = getEntriesFromData(dataArray.find(e=> e.parent === "1").id, "object")
+      let str = JSON.stringify(obj, null, "\t")
+      console.log(str)
+      let blobby = new Blob([str], {type: 'application/json'})
+      let bloburl = URL.createObjectURL(blobby)
+      setShowDownload(true)
+      setDownloadURL(bloburl)
+      
+    }
+  }
+
+
+  const getEntriesFromData = (parentID, parentType) => {
+    let children = dataArray.filter((e)=> e.parent === parentID)
+    let result
+    if (parentType === "array") {
+      result = []
+      for (const child of children) {
+        if (child.type === "array" || child.type === "object") {
+          result.push(getEntriesFromData(child.id, child.type))
+        }
+        else {
+          if (child.type === "string") {
+            result.push(child.value)
+          }
+          else if (child.type === "number") {
+            result.push(Number(child.value))
+          }
+          else if (child.type === "boolean") {
+            if (child.value === "true") {
+              result.push(true)
+            }
+            else if (child.value === "false") {
+              result.push(false)
+            }
+          }
+        }
+      }
+    }
+    else if (parentType === "object") {
+      result = {}
+      let independents = children.filter((el) => el.type !== "label")
+      for (const child of independents) {
+        let label = children.find((e) => e.type === "label" && e.id === child.label)
+        if (child.type === "array" || child.type === "object") {
+          result[label.value] = getEntriesFromData(child.id, child.type)
+        }
+        else {
+          if (child.type === "string") {
+            result[label.value] = child.value
+          }
+          else if (child.type === "number") {
+            result[label.value] = Number(child.value)
+          }
+          else if (child.type === "boolean") {
+            if (child.value === "true") {
+              result[label.value] = true
+            }
+            else if (child.value === "false") {
+              result[label.value] = false
+            }
+          }
+        }
+      }
+    }
+    console.log(result)
+    return result;
+  }
+
   return (
     <div className="App">
-      <TopBar toSetFile={fileToJSON}></TopBar>
+      <TopBar toSetTitle={setTitle} title={title} toSetFile={fileToJSON} toExport={exportData} toShowDownload={setShowDownload} boolDownload={showDownload} downurl={downloadURL} newDoc={() => createDataFromJSON({})}></TopBar>
       <div className="topbuffer" style={{width:"100%", height:"4rem"}}></div>
-      <ContentArea myData={dataArray} loaded={dataLoaded} updateData={(el)=> setDataArray(el)}></ContentArea>
+      <ContentArea myData={dataArray} sendData={sendData} toError={setGlobError} loaded={dataLoaded} updateData={(el)=> {setDataArray(el); setSendData(false)}} updateError={(e) => setGlobError(e)}></ContentArea>
       
     </div>
   );
@@ -88,12 +171,16 @@ function TopBar (props) {
       setShowUploadError(true)
     }
   }
+  const tryCreateNew = () => {
+    props.newDoc()
+  }
 
   return (
-    <div className="TopBar" style={{display:"flex", alignItems:"center", backgroundColor: 'ghostwhite', position:"fixed"}}>
+    <div className="TopBar" style={{display:"flex", alignItems:"center", backgroundColor: 'ghostwhite', position:"fixed", width:"100vw"}}>
       <div className="title" style={{margin:"0 1rem", padding:"0 1rem"}}><h2>JSON Editor</h2></div>
       <div className="import" style={{margin:"0 1rem", padding:"0 1rem"}}><button onClick={(e) => setShowUploadAlert(true)}>Import JSON</button></div>
-      <div className="export" style={{margin:"0 1rem", padding:"0 1rem"}}><button>Export JSON</button></div>
+      <div className="export" style={{margin:"0 1rem", padding:"0 1rem"}}><button onClick={(e) => props.toExport()}>Export JSON</button></div>
+      <div className="createNew" style={{margin:"0 1rem", padding:"0 1rem"}}><button onClick={() => tryCreateNew()}>Create New</button></div>
       <div className="toolset" style={{display:"flex", flexDirection:"row", width:"content"}}>
         <Tool type="object" tooltip="Object" icon="O"></Tool>
         <Tool type="array" tooltip="Array" icon="A"></Tool>
@@ -101,8 +188,10 @@ function TopBar (props) {
         <Tool type="number" tooltip="Number" icon="N"></Tool>
         <Tool type="boolean" tooltip="Boolean" icon="B"></Tool>
       </div>
+      <div className="docTitle" style={{margin:"0 1rem", padding:"0 1rem"}}><input type="text" onChange={(e) => props.toSetTitle(e.target.value)} defaultValue={props.title}></input></div>
       
       {showUploadAlert ? <UploadAlert toClose={setShowUploadAlert} toSetFile={tryUploadFile} error={showUploadError}></UploadAlert> : null}
+      {props.boolDownload ? <DownloadAlert title={props.title} toClose={e => props.toShowDownload(e)} fileURL={props.downurl}></DownloadAlert> : null}
     </div>
   )
 }
@@ -111,7 +200,13 @@ function TopBar (props) {
 
 function Tool (props) {
   return (
-    <div className={"tool " + props.type} draggable onDragStart={(e) => e.dataTransfer.setData("text", props.type)} style={{margin:"0 1rem", padding:".5rem 1rem", color:"blueviolet", border:"1px dotted blue", borderRadius:"1rem", backgroundColor:"skyblue"}}>{props.icon}</div>
+    <div className={"tool-holder"}>
+      <div className={"tooltip " + props.type + "-tip"}>
+        {props.tooltip}
+      </div>
+      <div className={"tool " + props.type} draggable onDragStart={(e) => e.dataTransfer.setData("text", props.type)} style={{margin:"0 1rem", padding:".5rem 1rem", color:"blueviolet", border:"1px dotted blue", borderRadius:"1rem", backgroundColor:"skyblue"}}>{props.icon}</div>
+    </div>
+    
   )
 }
 
@@ -128,6 +223,22 @@ function UploadAlert (props) {
         <input type="file" style={{margin:"1rem"}} onChange={(e) => props.toSetFile(e.target.files[0])}></input>
         {props.error? <h3 style={{color:"red"}}>This is not a JSON file. Please try again.</h3> : null}
         <div className="dragHere" onDrop={(e) => { e.preventDefault(); props.toSetFile(e.dataTransfer.files[0])}} style={{margin:"1rem", height:"4rem", border:"dashed .25rem grey", backgroundColor:"lightgrey"}}>Drag File Here</div>
+      </div>
+    </div>
+  )
+}
+
+function DownloadAlert (props) {
+
+  return (
+    <div className="DownloadAlert">
+      <div className="GrayedOut" style={{backgroundColor: 'rgba(128, 128, 128, 0.5)', height:"100vh", width:"100vw", position:"fixed", left:0, top:0}}>
+      </div>
+      <div className="DownloadWindow" style={{backgroundColor: 'ghostwhite', height:"content", width:"20rem", position:"absolute", left:"calc(50vw - 10rem)", top:"25vh"}}>
+        <div className="closeX" style={{color:"red", userSelect:"none", position:"absolute", right:0, top:0, padding:".5rem 1rem" }} onClick={()=> props.toClose(false)}>X</div>
+        <div className="padding" style={{height:"2rem"}}></div>
+        <a href={props.fileURL} download={props.title}>Download Here</a>
+        <div className="padding" style={{height:"2rem"}}></div>
       </div>
     </div>
   )

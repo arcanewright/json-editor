@@ -1,0 +1,28 @@
+input, select {
+    background-color: none;
+    border:none;
+    background: none;
+    font-size: inherit;
+    font: inherit;
+    font-family: inherit;
+    padding:none;
+    margin:none;
+    width:fit-content;
+    text-decoration: none;
+}
+
+.deleter {
+    color:rgb(212, 155, 167);
+    user-select: none;
+
+}
+
+.deleter:hover {
+    color:rgb(211, 90, 116);
+}
+
+.error {
+    padding: 0 1rem;
+    color:red;
+    background-color: rgb(255, 143, 165);
+}
